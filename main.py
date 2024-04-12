@@ -5,6 +5,7 @@ import requests
 import io
 import os
 import tempfile
+import subprocess
 import moviepy.editor as mp
 
 # Initialize the Pyrogram client with API credentials
@@ -92,6 +93,7 @@ async def handle_message(client, message):
 
 
 
+
 async def send_file(item, message, status_message):
     try:
         # Download the file directly with requests
@@ -114,6 +116,9 @@ async def send_file(item, message, status_message):
                 for chunk in response.iter_content(chunk_size=128):
                     temp_file.write(chunk)
                 temp_file_path = temp_file.name
+
+            # Print metadata to console
+            print_video_metadata(temp_file_path)
 
             # Process different content types
             content_type = response.headers.get('content-type')
@@ -138,6 +143,15 @@ async def send_file(item, message, status_message):
     finally:
         # Delete the status indicating message
         await status_message.delete()
+
+
+def print_video_metadata(file_path):
+    try:
+        # Use ffprobe to get metadata
+        result = subprocess.run(['ffprobe', '-v', 'error', '-show_format', '-show_streams', file_path], capture_output=True, text=True)
+        print(result.stdout)
+    except Exception as e:
+        print(f"Error extracting metadata: {e}")
 
 def geft_video_duration(file_bytes):
     with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
