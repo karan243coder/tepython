@@ -91,40 +91,47 @@ async def handle_message(client, message):
 
 
 
-
 async def send_file(item, message, status_message):
     try:
-        # Download the file directly with requests
-        response = requests.get(item, stream=True)
-        
-        # Check if the request was successful
+        response = requests.get(item)
+        content_disposition = response.headers.get('content-disposition')
+        if content_disposition:
+            filename_index = content_disposition.find('filename=')
+            if filename_index != -1:
+                filename = content_disposition[filename_index + len('filename='):]
+                filename = filename.strip('"')  # Remove surrounding quotes, if any
+                file_bytes = io.BytesIO(response.content)  # Define file_bytes here
+                file_bytes.name = filename
         if response.status_code == 200:
-            content_disposition = response.headers.get('content-disposition')
-            filename = None
-            
-            # Extract filename from content disposition header
-            if content_disposition:
-                filename_index = content_disposition.find('filename=')
-                if filename_index != -1:
-                    filename = content_disposition[filename_index + len('filename='):]
-                    filename = filename.strip('"')  # Remove surrounding quotes, if any
-
-            # Process different content types
             content_type = response.headers.get('content-type')
-            if 'video' in content_type:
-                # Reply with video
-                await message.reply_video(video=response.content, duration=video_duration, thumb=thumbnail_path, caption=filename, reply_to_message_id=message.id)
-            elif 'image' in content_type:
-                # Reply with image
-                await message.reply_photo(photo=response.content, caption=filename, reply_to_message_id=message.id)
+            if content_type:
+                if 'video' in content_type:
+                    # Get video duration
+                    video_duration = get_video_duration(file_bytes)
+
+                    # Generate thumbnail
+                    thumbnail_path = generate_thumbnail(file_bytes)
+
+                    await message.reply_video(video=file_bytes, duration=video_duration, thumb=thumbnail_path, caption=filename, reply_to_message_id=message.id)
+                elif 'image' in content_type:
+                    await message.reply_photo(photo=file_bytes, caption=filename, reply_to_message_id=message.id)
+                else:
+                    if content_disposition:
+                        filename_index = content_disposition.find('filename=')
+                        if filename_index != -1:
+                            filename = content_disposition[filename_index + len('filename='):]
+                            filename = filename.strip('"')  # Remove surrounding quotes, if any
+                            file_bytes.name = filename
+                            await message.reply_document(document=file_bytes, caption=filename, reply_to_message_id=message.id)
+                        else:
+                            await message.reply_text("Failed to extract filename from content disposition.\n\n **Use this [link]({item})** to download the file\n\n**OR**, use our **[URL UPLOADER BOT](https://t.me/UrlUploaderio_bot)**", reply_to_message_id=message.id)
+                    else:
+                        await message.reply_text("Failed to extract filename from content disposition.\n\n **Use this [link]({item})** to download the file\n\n**OR**, use our **[URL UPLOADER BOT](https://t.me/UrlUploaderio_bot)**", reply_to_message_id=message.id)
             else:
-                # Reply with document
-                await message.reply_document(document=response.content, caption=filename, reply_to_message_id=message.id)
+                await message.reply_text("Failed to determine the type of the file.\n\n **Use this [link]({item})** to download the file\n\n**OR**, use our **[URL UPLOADER BOT](https://t.me/UrlUploaderio_bot)**", reply_to_message_id=message.id)
         else:
-            # If the request failed, reply with an error message
-            await message.reply_text(f"Failed to download the file from the provided URL.\n\n **Use this [link]({item})** to download the file\n\n**OR**, use our **[URL UPLOADER BOT](https://t.me/UrlUploaderio_bot)**", reply_to_message_id=message.id)
+            await message.reply_text("Failed to download the file from the provided URL.\n\n **Use this [link]({item})** to download the file\n\n**OR**, use our **[URL UPLOADER BOT](https://t.me/UrlUploaderio_bot)**", reply_to_message_id=message.id)
     except Exception as e:
-        # If an error occurs during the process, reply with an error message
         await message.reply_text(f"An error occurred: {str(e)}\n\n **Use this [link]({item})** to download the file\n\n**OR**, use our **[URL UPLOADER BOT](https://t.me/UrlUploaderio_bot)**", reply_to_message_id=message.id)
     finally:
         # Delete the status indicating message
