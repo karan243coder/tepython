@@ -130,7 +130,7 @@ async def send_file(item, message, status_message):
         # Delete the status indicating message
         await status_message.delete()
 
-def geft_video_duration(file_bytes):
+def get_video_duration(file_bytes):
     with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
         temp_file.write(file_bytes.getbuffer())
         temp_file_path = temp_file.name
@@ -139,7 +139,7 @@ def geft_video_duration(file_bytes):
     os.remove(temp_file_path)  # Remove temporary file
     return duration
 
-def gengerate_thumbnail(file_bytes):
+def generate_thumbnail(file_bytes):
     with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
         temp_file.write(file_bytes.getbuffer())
         temp_file_path = temp_file.name
