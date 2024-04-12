@@ -113,7 +113,7 @@ async def send_file(item, message, status_message):
             content_type = response.headers.get('content-type')
             if 'video' in content_type:
                 # Reply with video
-                await message.reply_video(video=response.content, duration=video_duration, thumb=thumbnail_path, caption=filename, reply_to_message_id=message.id)
+                await message.reply_video(video=response.content, caption=filename, reply_to_message_id=message.id)
             elif 'image' in content_type:
                 # Reply with image
                 await message.reply_photo(photo=response.content, caption=filename, reply_to_message_id=message.id)
