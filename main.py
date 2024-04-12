@@ -5,7 +5,6 @@ import requests
 import io
 import os
 import tempfile
-import subprocess
 import moviepy.editor as mp
 
 # Initialize the Pyrogram client with API credentials
@@ -93,7 +92,6 @@ async def handle_message(client, message):
 
 
 
-
 async def send_file(item, message, status_message):
     try:
         # Download the file directly with requests
@@ -111,29 +109,17 @@ async def send_file(item, message, status_message):
                     filename = content_disposition[filename_index + len('filename='):]
                     filename = filename.strip('"')  # Remove surrounding quotes, if any
 
-            # Save file to temporary location
-            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                for chunk in response.iter_content(chunk_size=128):
-                    temp_file.write(chunk)
-                temp_file_path = temp_file.name
-
-            # Print metadata to console
-            print_video_metadata(temp_file_path)
-
             # Process different content types
             content_type = response.headers.get('content-type')
             if 'video' in content_type:
                 # Reply with video
-                await message.reply_video(video=open(temp_file_path, 'rb'), caption=filename, reply_to_message_id=message.id)
+                await message.reply_video(video=response.content, duration=video_duration, thumb=thumbnail_path, caption=filename, reply_to_message_id=message.id)
             elif 'image' in content_type:
                 # Reply with image
-                await message.reply_photo(photo=open(temp_file_path, 'rb'), caption=filename, reply_to_message_id=message.id)
+                await message.reply_photo(photo=response.content, caption=filename, reply_to_message_id=message.id)
             else:
                 # Reply with document
-                await message.reply_document(document=open(temp_file_path, 'rb'), caption=filename, reply_to_message_id=message.id)
-                
-            # Delete the temporary file
-            os.unlink(temp_file_path)
+                await message.reply_document(document=response.content, caption=filename, reply_to_message_id=message.id)
         else:
             # If the request failed, reply with an error message
             await message.reply_text(f"Failed to download the file from the provided URL.\n\n **Use this [link]({item})** to download the file\n\n**OR**, use our **[URL UPLOADER BOT](https://t.me/UrlUploaderio_bot)**", reply_to_message_id=message.id)
@@ -143,15 +129,6 @@ async def send_file(item, message, status_message):
     finally:
         # Delete the status indicating message
         await status_message.delete()
-
-
-def print_video_metadata(file_path):
-    try:
-        # Use ffprobe to get metadata
-        result = subprocess.run(['ffprobe', '-v', 'error', '-show_format', '-show_streams', file_path], capture_output=True, text=True)
-        print(result.stdout)
-    except Exception as e:
-        print(f"Error extracting metadata: {e}")
 
 def geft_video_duration(file_bytes):
     with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
